@@ -1,0 +1,38 @@
+<div id="hypervisor-inventory-report">
+	<div class="intro-stats">
+    <h2>Overview</h2>
+    </div>
+	<table>
+		<thead>
+		<th></th>
+		<th>Name</th>
+		<th>Type</th>
+		<th>Scope</th>
+		<th>Accounts</th>
+		<th>Usage</th>
+		</thead>
+		<tbody>
+			{{#each main}}
+				<tr>
+					<td width="75" class="hidden-xs">	
+						<img src={{dataMap.imageSrc}} class="icon policy-type-icon">
+					</td>
+					<td>{{dataMap.name}}</td>
+					<td>{{dataMap.policyType}}</td>
+					<td>{{dataMap.scope}}</td>
+					<td>{{dataMap.accounts}}</td>
+					<td>
+						<div class="policyusage">
+							<div class="progress" title="{{dataMap.utilizationPercentage}}%">
+								<div class="progress-bar progress-bar-{{dataMap.utilizationColor}}" style="width:{{dataMap.utilizationPercentage}}%">
+									<span class="sr-only"></span>
+								</div>
+							</div>
+							<div>{{dataMap.currentValue}} of <span title="{{dataMap.maxValue}}">{{dataMap.maxValue}}</span></div>
+						</div>
+					</td>
+				</tr>
+			{{/each}}
+		</tbody>
+	</table>
+</div>

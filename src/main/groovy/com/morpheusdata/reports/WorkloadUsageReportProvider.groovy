@@ -81,7 +81,7 @@ class WorkloadUsageReportProvider extends AbstractReportProvider {
 
 	void process(ReportResult reportResult) {
 		// Update the status of the report (generating) - https://developer.morpheusdata.com/api/com/morpheusdata/model/ReportResult.Status.html
-		morpheus.report.updateReportResultStatus(reportResult,ReportResult.Status.generating).blockingGet();
+		morpheus.report.updateReportResultStatus(reportResult,ReportResult.Status.generating).blockingAwait();
 
 		Long displayOrder = 0
 		List<GroovyRowResult> results = []
@@ -105,6 +105,9 @@ class WorkloadUsageReportProvider extends AbstractReportProvider {
 			instances = new Sql(dbConnection).rows("SELECT instance.id, instance.name, instance.max_cores, instance.max_memory, instance.max_storage, compute_zone.name as cloud_name, account.name as account_name FROM instance LEFT JOIN compute_zone on instance.provision_zone_id = compute_zone.id LEFT JOIN account ON instance.account_id = account.id order by id asc;")
 			accounts = new Sql(dbConnection).rows("SELECT name from account order by id asc;")
 			clouds = new Sql(dbConnection).rows("SELECT name from compute_zone order by id asc;")
+
+			def usageClouds = morpheusContext.async.cloud.list().toList().blockingGet()
+			println usageClouds
 
 			// Iterate through each tenant and create a data payload for each one
 			/*
@@ -161,11 +164,28 @@ class WorkloadUsageReportProvider extends AbstractReportProvider {
 					payload["cloud"] = resultRow.cloud_name
 					payload["discovered"] = resultRow.discovered
 					payload["max_cores"] = resultRow.max_cores
-					payload["max_memory"] = resultRow.max_memory / (1024 * 1024 * 1024)
-					payload["max_storage"] = Math.round(resultRow.max_storage / (1024 * 1024 * 1024))
-					it.allocated_cpu = it.allocated_cpu + resultRow.max_cores
-					it.allocated_memory = it.allocated_memory + resultRow.max_memory
-					it.allocated_storage = it.allocated_storage + resultRow.max_storage
+
+					if (resultRow.max_memory){
+						payload["max_memory"] = resultRow.max_memory / (1024 * 1024 * 1024)
+					} else {
+						payload["max_memory"] = 0
+					}
+
+					if (resultRow.max_storage){
+						payload["max_storage"] = Math.round(resultRow.max_storage / (1024 * 1024 * 1024))
+					} else {
+						payload["max_storage"] = 0
+					}
+					if (resultRow.max_cores){
+						it.allocated_cpu = it.allocated_cpu + resultRow.max_cores
+					}
+					if(resultRow.max_memory){
+						it.allocated_memory = it.allocated_memory + resultRow.max_memory
+					}
+					if (resultRow.max_storage){
+						it.allocated_storage = it.allocated_storage + resultRow.max_storage
+					}
+
 					it.workloads << payload
 					it.count++
 				}
@@ -187,9 +207,9 @@ class WorkloadUsageReportProvider extends AbstractReportProvider {
 			}
 			return resultRowRecord
 		}.buffer(50).doOnComplete {
-			morpheus.report.updateReportResultStatus(reportResult,ReportResult.Status.ready).blockingGet();
+			morpheus.report.updateReportResultStatus(reportResult,ReportResult.Status.ready).blockingAwait();
 		}.doOnError { Throwable t ->
-			morpheus.report.updateReportResultStatus(reportResult,ReportResult.Status.failed).blockingGet();
+			morpheus.report.updateReportResultStatus(reportResult,ReportResult.Status.failed).blockingAwait();
 		}.subscribe {resultRows ->
 			morpheus.report.appendResultRows(reportResult,resultRows).blockingGet()
 		}
@@ -204,9 +224,24 @@ class WorkloadUsageReportProvider extends AbstractReportProvider {
 					payload["max_cores"] = instance.max_cores
 					payload["max_memory"] = instance.max_memory / (1024 * 1024 * 1024)
 					payload["max_storage"] = Math.round(instance.max_storage / (1024 * 1024 * 1024))
-					account.allocated_cpu = account.allocated_cpu + instance.max_cores
-					account.allocated_memory = account.allocated_memory + instance.max_memory
-					account.allocated_storage = account.allocated_storage + instance.max_storage
+					
+					if (instance.max_cores){
+						account.allocated_cpu = account.allocated_cpu + instance.max_cores
+					} else {
+						account.allocated_cpu = account.allocated_cpu + 0
+					}
+
+					if (instance.max_memory){
+						account.allocated_memory = account.allocated_memory + instance.max_memory
+					} else {
+						account.allocated_memory = account.allocated_memory + 0
+					}
+
+					if (instance.max_storage){
+						account.allocated_storage = account.allocated_storage + instance.max_storage
+					} else {
+						account.allocated_storage = account.allocated_storage + 0
+					}
 					account.workloads << payload
 				}
 			}
@@ -218,7 +253,9 @@ class WorkloadUsageReportProvider extends AbstractReportProvider {
 		}
 
 		accountpayload.each { account ->
+			account.allocated_cpu = Math.round(account.allocated_cpu)
 			account.allocated_memory = account.allocated_memory / (1024 * 1024 * 1024)
+			account.allocated_memory = Math.round(account.allocated_memory)
 			account.allocated_storage = Math.round(account.allocated_storage / (1024 * 1024 * 1024))
 		}
 		def list = []

@@ -14,7 +14,7 @@ import com.morpheusdata.response.ServiceResponse
 import groovy.sql.GroovyRowResult
 import groovy.sql.Sql
 import groovy.util.logging.Slf4j
-import io.reactivex.Observable;
+import io.reactivex.rxjava3.core.Observable;
 import java.sql.Connection
 
 @Slf4j

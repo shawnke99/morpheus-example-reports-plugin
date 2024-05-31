@@ -17,6 +17,8 @@ class ReportsPlugin extends Plugin {
 		this.setAuthor("Martez Reed")
 		this.setSourceCodeLocationUrl("https://github.com/martezr/morpheus-example-reports-plugin")
 		this.setIssueTrackerUrl("https://github.com/martezr/morpheus-example-reports-plugin/issues")
+		PolicyUsageReportProvider policytUsageReportProvider = new PolicyUsageReportProvider(this, morpheus)
+		this.pluginProviders.put(policytUsageReportProvider.code, policytUsageReportProvider)
 		CypherReportProvider cypherReportProvider = new CypherReportProvider(this, morpheus)
 		this.pluginProviders.put(cypherReportProvider.code, cypherReportProvider)
 		RestApiReportProvider restApiReportProvider = new RestApiReportProvider(this, morpheus)

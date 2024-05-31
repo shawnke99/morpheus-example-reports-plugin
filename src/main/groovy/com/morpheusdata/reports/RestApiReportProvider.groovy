@@ -14,7 +14,7 @@ import com.morpheusdata.response.ServiceResponse
 import groovy.sql.GroovyRowResult
 import groovy.sql.Sql
 import groovy.util.logging.Slf4j
-import io.reactivex.Observable;
+import io.reactivex.rxjava3.core.Observable;
 import java.sql.Connection
 import com.morpheusdata.core.util.HttpApiClient
 import groovy.json.JsonOutput
@@ -30,7 +30,7 @@ class RestApiReportProvider extends AbstractReportProvider {
 	RestApiReportProvider(Plugin plugin, MorpheusContext context) {
 		this.plugin = plugin
 		this.morpheusContext = context
-        	this.reportAPI = new HttpApiClient()
+        this.reportAPI = new HttpApiClient()
 	}
 
 	@Override

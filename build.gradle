@@ -20,9 +20,9 @@ repositories {
 }
 
 dependencies {
-    compileOnly 'com.morpheusdata:morpheus-plugin-api:0.15.3'
+    compileOnly 'com.morpheusdata:morpheus-plugin-api:0.15.9'
     compileOnly 'org.codehaus.groovy:groovy-all:2.5.6'
-    compileOnly 'io.reactivex.rxjava2:rxjava:2.2.0'
+    compileOnly 'io.reactivex.rxjava3:rxjava:3.1.8'
     compileOnly "org.slf4j:slf4j-api:1.7.26"
     compileOnly "org.slf4j:slf4j-parent:1.7.26"
 }
