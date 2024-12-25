@@ -22,11 +22,11 @@ import groovy.json.*
 import java.sql.Connection
 
 @Slf4j
-class WorkloadUsageReportProvider extends AbstractReportProvider {
+class BudgetCostReportProvider extends AbstractReportProvider {
 	Plugin plugin
 	MorpheusContext morpheusContext
 
-	WorkloadUsageReportProvider(Plugin plugin, MorpheusContext context) {
+	BudgetCostReportProvider(Plugin plugin, MorpheusContext context) {
 		this.plugin = plugin
 		this.morpheusContext = context
 	}
@@ -43,12 +43,12 @@ class WorkloadUsageReportProvider extends AbstractReportProvider {
 
 	@Override
 	String getCode() {
-		'workload-usage-overview-report'
+		'budget-cost-overview-report'
 	}
 
 	@Override
 	String getName() {
-		'Workload Usage Overview'
+		'BudgetCost Overview'
 	}
 
 	 ServiceResponse validateOptions(Map opts) {
@@ -68,7 +68,7 @@ class WorkloadUsageReportProvider extends AbstractReportProvider {
 		// Pass report data to the hbs render
 		reportPayload.put("reportdata",reportRowsBySection)
 		model.object = reportPayload
-		getRenderer().renderTemplate("hbs/workloadUsage", model)
+		getRenderer().renderTemplate("hbs/budgetCost", model)
 	}
 
 
@@ -88,6 +88,9 @@ class WorkloadUsageReportProvider extends AbstractReportProvider {
 		List<GroovyRowResult> instances = []
 		List<GroovyRowResult> accounts = []
 		List<GroovyRowResult> clouds = []
+		// custom BudgetCost
+		List<GroovyRowResult> budgets = []
+
 		Connection dbConnection
 		Long totalWorkloads = 0
 		Long licensedWorkloads = 0
@@ -102,9 +105,12 @@ class WorkloadUsageReportProvider extends AbstractReportProvider {
 			dbConnection = morpheus.report.getReadOnlyDatabaseConnection().blockingGet()
 			// Evaluate if a search filter or phrase has been defined
 			results = new Sql(dbConnection).rows("SELECT compute_server.id,compute_server.name,compute_server.max_cores,compute_server.max_memory,compute_server.max_storage,compute_server.provision,compute_server.status,compute_server.server_type,compute_server.zone_id,compute_server.managed,compute_server.server_type,compute_server.status,compute_server.discovered,compute_server.account_id,compute_server.power_state,compute_server_type.name as server_type_name, compute_zone.name as cloud_name, account.name as account_name FROM compute_server LEFT JOIN account ON compute_server.account_id = account.id LEFT JOIN compute_zone on compute_server.zone_id = compute_zone.id INNER JOIN compute_server_type ON compute_server.compute_server_type_id=compute_server_type.id WHERE compute_server.compute_server_type_id in (select id from compute_server_type where managed = 0 and container_hypervisor = 0 and vm_hypervisor = 0 ) order by id asc;")
-			instances = new Sql(dbConnection).rows("SELECT instance.id, instance.name, instance.max_cores, instance.max_memory, instance.max_storage, compute_zone.name as cloud_name, account.name as account_name FROM instance LEFT JOIN compute_zone on instance.provision_zone_id = compute_zone.id LEFT JOIN account ON instance.account_id = account.id order by id asc;")
+			instances = new Sql(dbConnection).rows("SELECT instance.id, instance.name, instance.max_cores, instance.max_memory, instance.max_storage, instance.instance_price, compute_zone.name as cloud_name, account.name as account_name FROM instance LEFT JOIN compute_zone on instance.provision_zone_id = compute_zone.id LEFT JOIN account ON instance.account_id = account.id order by id asc;")
 			accounts = new Sql(dbConnection).rows("SELECT name from account order by id asc;")
 			clouds = new Sql(dbConnection).rows("SELECT name from compute_zone order by id asc;")
+
+			// custom BudgetCost
+			budgets = new Sql(dbConnection).rows("SELECT budget.id, budget.name, budget.account, budget.enabled, budget.start_date, budget.end_date, budget.interval, budget.is_fiscal, budget.average_cost, budget.total_cost from budget order by id asc;")
 
 			def usageClouds = morpheusContext.async.cloud.list().toList().blockingGet()
 			println usageClouds
@@ -130,6 +136,7 @@ class WorkloadUsageReportProvider extends AbstractReportProvider {
 				payload["allocated_memory"] = 0
 				payload["allocated_storage"] = 0
 				payload["workloads"] = []
+				payload["allocated_instanceprice"] = 0
 				accountpayload << payload
 			}
 			// Iterate through each cloud and create a data payload for each one
@@ -242,6 +249,15 @@ class WorkloadUsageReportProvider extends AbstractReportProvider {
 					} else {
 						account.allocated_storage = account.allocated_storage + 0
 					}
+
+					log.info("instance instance_price ${instance.instance_price}")
+					log.info("instance instance_price.cost ${instance.instance_price.cost}")
+					if (instance.instance_price){
+						account.allocated_instanceprice = account.allocated_instanceprice + instance.instance_price.cost
+					} else {
+						account.allocated_instanceprice = account.allocated_instanceprice + 0
+					}
+					
 					account.workloads << payload
 				}
 			}
@@ -283,7 +299,8 @@ class WorkloadUsageReportProvider extends AbstractReportProvider {
 		firstFiveClouds << sortedClouds[3]
 		firstFiveClouds << sortedClouds[4]
 		def cloudsJson = JsonOutput.toJson(sortedClouds)
-		Map<String,Object> data = [totalWorkloads: totalWorkloads + instances.size(), licensedWorkloads: licensedWorkloads, discoveredJson: json, discoveredPayload: list, totalInstances: instances.size(), instancedata: instances, accountsJson: accountsJson, cloudsJson: cloudsJson, cloudsPayload: firstFiveClouds, accountsPayload: firstFiveAccounts, accountNames: accountNames, serverPayload: accountpayload ]
+
+		Map<String,Object> data = [totalWorkloads: totalWorkloads + instances.size(), licensedWorkloads: licensedWorkloads, discoveredJson: json, discoveredPayload: list, totalInstances: instances.size(), instancedata: instances, accountsJson: accountsJson, cloudsJson: cloudsJson, cloudsPayload: firstFiveClouds, accountsPayload: firstFiveAccounts, accountNames: accountNames, serverPayload: accountpayload, budgetdata: budgets ]
 		ReportResultRow resultRowRecord = new ReportResultRow(section: ReportResultRow.SECTION_HEADER, displayOrder: displayOrder++, dataMap: data)
         morpheus.report.appendResultRows(reportResult,[resultRowRecord]).blockingGet()
 	}
@@ -292,7 +309,7 @@ class WorkloadUsageReportProvider extends AbstractReportProvider {
 	// The description associated with the custom report
 	 @Override
 	 String getDescription() {
-		 return "Workload Usage Overview"
+		 return "BudgetCost Overview"
 	 }
 
 	// The category of the custom report

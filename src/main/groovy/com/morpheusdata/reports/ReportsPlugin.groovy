@@ -7,26 +7,16 @@ class ReportsPlugin extends Plugin {
 
 	@Override
 	String getCode() {
-		return 'custom-report-example'
+		return 'custom-bd-report'
 	}
 
 	@Override
 	void initialize() {
-		this.setName("Custom Report Examples")
-		this.setDescription("Example Morpheus custom reports")
-		this.setAuthor("Martez Reed")
-		this.setSourceCodeLocationUrl("https://github.com/martezr/morpheus-example-reports-plugin")
-		this.setIssueTrackerUrl("https://github.com/martezr/morpheus-example-reports-plugin/issues")
-		PolicyUsageReportProvider policytUsageReportProvider = new PolicyUsageReportProvider(this, morpheus)
-		this.pluginProviders.put(policytUsageReportProvider.code, policytUsageReportProvider)
-		CypherReportProvider cypherReportProvider = new CypherReportProvider(this, morpheus)
-		this.pluginProviders.put(cypherReportProvider.code, cypherReportProvider)
-		RestApiReportProvider restApiReportProvider = new RestApiReportProvider(this, morpheus)
-		this.pluginProviders.put(restApiReportProvider.code, restApiReportProvider)
-		UserProvisioningHistoryReportProvider userProvisioningHistoryReportProvider = new UserProvisioningHistoryReportProvider(this, morpheus)
-		this.pluginProviders.put(userProvisioningHistoryReportProvider.code, userProvisioningHistoryReportProvider)
-		WorkloadUsageReportProvider workloadUsageReportProvider = new WorkloadUsageReportProvider(this, morpheus)
-		this.pluginProviders.put(workloadUsageReportProvider.code, workloadUsageReportProvider)
+		this.setName("Custom Bd Report")
+		this.setDescription("Budget and Cost Morpheus custom reports")
+		this.setAuthor("Shawn Ke")
+		BudgetCostReportProvider budgetCostReportProvider = new BudgetCostReportProvider(this, morpheus)
+		this.pluginProviders.put(budgetCostReportProvider.code, budgetCostReportProvider)
 	}
 
 	@Override
@@ -36,7 +26,7 @@ class ReportsPlugin extends Plugin {
 	@Override
 	public List<Permission> getPermissions() {
 		// Define the available permissions for the report
-		Permission permission = new Permission('Custom Example Reports', 'customExampleReports', [Permission.AccessType.none, Permission.AccessType.full])
+		Permission permission = new Permission('Custom Bd Reports', 'customBdReports', [Permission.AccessType.none, Permission.AccessType.full])
 		return [permission];
 	}
 }
